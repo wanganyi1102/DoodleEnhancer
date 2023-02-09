@@ -26,10 +26,10 @@ class BaseOptions():
                                  help='training and testing dataset for source domain')
         self.parser.add_argument('--img_target_file', type=str, default='/data/dataset/Image2Depth_SUN_NYU/trainA.txt',
                                  help='training and testing dataser for target domain')
-        self.parser.add_argument('--lab_source_file', type=str, default='/data/dataset/Image2Depth_SUN_NYU/trainC_SYN10.txt',
-                                 help='training label for source domain')
-        self.parser.add_argument('--lab_target_file', type=str, default='/data/dataset/Image2Depth_SUN_NYU/trainC.txt',
-                                 help='training label for target domain')
+        # self.parser.add_argument('--lab_source_file', type=str, default='/data/dataset/Image2Depth_SUN_NYU/trainC_SYN10.txt',
+        #                          help='training label for source domain')
+        # self.parser.add_argument('--lab_target_file', type=str, default='/data/dataset/Image2Depth_SUN_NYU/trainC.txt',
+                                #  help='training label for target domain')
         self.parser.add_argument('--dataset_mode', type=str, default='paired',
                                  help='chooses how datasets are loaded. [paired| unpaired]')
         self.parser.add_argument('--loadSize', type=list, default=[640, 192],

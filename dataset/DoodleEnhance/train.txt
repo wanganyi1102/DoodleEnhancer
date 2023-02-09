@@ -1,0 +1,15 @@
+./dataset/DoodleEnhance/train/giraffeconverted9.png
+./dataset/DoodleEnhance/train/giraffeconverted8.png
+./dataset/DoodleEnhance/train/giraffeconverted14.png
+./dataset/DoodleEnhance/train/giraffeconverted15.png
+./dataset/DoodleEnhance/train/giraffeconverted12.png
+./dataset/DoodleEnhance/train/giraffeconverted13.png
+./dataset/DoodleEnhance/train/giraffeconverted11.png
+./dataset/DoodleEnhance/train/giraffeconverted10.png
+./dataset/DoodleEnhance/train/giraffeconverted3.png
+./dataset/DoodleEnhance/train/giraffeconverted2.png
+./dataset/DoodleEnhance/train/giraffeconverted1.png
+./dataset/DoodleEnhance/train/giraffeconverted5.png
+./dataset/DoodleEnhance/train/giraffeconverted4.png
+./dataset/DoodleEnhance/train/giraffeconverted6.png
+./dataset/DoodleEnhance/train/giraffeconverted7.png

@@ -20,6 +20,7 @@ def make_dataset(path_files):
     return paths, size
 
 def make_dataset_txt(path_files):
+    print('pathfiles:', path_files)
     # reading txt file
     image_paths = []
 

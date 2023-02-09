@@ -1,0 +1,7 @@
+./dataset/DoodleEnhance/trainSYN/giraffe_syn1.jpg
+./dataset/DoodleEnhance/trainSYN/giraffe_syn2.jpg
+./dataset/DoodleEnhance/trainSYN/giraffe_syn3.jpg
+./dataset/DoodleEnhance/trainSYN/giraffe_syn7.jpg
+./dataset/DoodleEnhance/trainSYN/giraffe_syn6.jpg
+./dataset/DoodleEnhance/trainSYN/giraffe_syn4.jpg
+./dataset/DoodleEnhance/trainSYN/giraffe_syn5.jpg

@@ -64,7 +64,8 @@ class BaseModel():
             if isinstance(name, str):
                 save_filename = '%s_net_%s.pth' % (which_epoch, name)
                 save_path = os.path.join(self.save_dir, save_filename)
+                print('save path:', save_path)
                 net = getattr(self, 'net_'+name)
-                net.load_state_dict(torch.load(save_path))
+                net.load_state_dict(torch.load(save_path), strict=False)
                 if not self.isTrain:
                     net.eval()

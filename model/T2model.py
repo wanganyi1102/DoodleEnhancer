@@ -6,6 +6,9 @@ import util.task as task
 from .base_model import BaseModel
 from . import network
 
+from util import util
+import os
+
 class T2NetModel(BaseModel):
     def name(self):
         return 'T2Net model'
@@ -17,25 +20,25 @@ class T2NetModel(BaseModel):
         self.visual_names = ['img_s', 'img_t', 'lab_s', 'lab_t', 'img_s2t', 'img_t2t', 'lab_s_g', 'lab_t_g']
 
         if self.isTrain:
-            self.model_names = ['img2task', 's2t', 'img_D', 'f_D']
+            self.model_names = ['s2t', 'img_D']
         else:
-            self.model_names = ['img2task', 's2t']
+            self.model_names = ['s2t']
 
         # define the transform network
         self.net_s2t = network.define_G(opt.image_nc, opt.image_nc, opt.ngf, opt.transform_layers, opt.norm,
                                                   opt.activation, opt.trans_model_type, opt.init_type, opt.drop_rate,
                                                   False, opt.gpu_ids, opt.U_weight)
         # define the task network
-        self.net_img2task = network.define_G(opt.image_nc, opt.label_nc, opt.ngf, opt.task_layers, opt.norm,
-                                            opt.activation, opt.task_model_type, opt.init_type, opt.drop_rate,
-                                            False, opt.gpu_ids, opt.U_weight)
+        # self.net_img2task = network.define_G(opt.image_nc, opt.label_nc, opt.ngf, opt.task_layers, opt.norm,
+        #                                     opt.activation, opt.task_model_type, opt.init_type, opt.drop_rate,
+        #                                     False, opt.gpu_ids, opt.U_weight)
 
         # define the discriminator
         if self.isTrain:
             self.net_img_D = network.define_D(opt.image_nc, opt.ndf, opt.image_D_layers, opt.num_D, opt.norm,
                                               opt.activation, opt.init_type, opt.gpu_ids)
-            self.net_f_D = network.define_featureD(opt.image_feature, opt.feature_D_layers, opt.norm,
-                                                   opt.activation, opt.init_type, opt.gpu_ids)
+            # self.net_f_D = network.define_featureD(opt.image_feature, opt.feature_D_layers, opt.norm,
+            #                                        opt.activation, opt.init_type, opt.gpu_ids)
 
         if self.isTrain:
             self.fake_img_pool = ImagePool(opt.pool_size)
@@ -43,13 +46,19 @@ class T2NetModel(BaseModel):
             self.l1loss = torch.nn.L1Loss()
             self.nonlinearity = torch.nn.ReLU()
             # initialize optimizers
-            self.optimizer_T2Net = torch.optim.Adam([{'params': filter(lambda p: p.requires_grad, self.net_s2t.parameters())},
-                                                     {'params': filter(lambda p: p.requires_grad, self.net_img2task.parameters()),
-                                                      'lr': opt.lr_task, 'betas': (0.95, 0.999)}],
+            # self.optimizer_T2Net = torch.optim.Adam([{'params': filter(lambda p: p.requires_grad, self.net_s2t.parameters())},
+            #                                          {'params': filter(lambda p: p.requires_grad, self.net_img2task.parameters()),
+            #                                           'lr': opt.lr_task, 'betas': (0.95, 0.999)}],
+            #                                         lr=opt.lr_trans, betas=(0.5, 0.9))
+            # self.optimizer_D = torch.optim.Adam(itertools.chain(filter(lambda p: p.requires_grad, self.net_img_D.parameters()),
+            #                                                     filter(lambda p: p.requires_grad, self.net_f_D.parameters())),
+            #                                     lr=opt.lr_trans, betas=(0.5, 0.9))
+
+            self.optimizer_T2Net = torch.optim.Adam([{'params': filter(lambda p: p.requires_grad, self.net_s2t.parameters())}],
                                                     lr=opt.lr_trans, betas=(0.5, 0.9))
-            self.optimizer_D = torch.optim.Adam(itertools.chain(filter(lambda p: p.requires_grad, self.net_img_D.parameters()),
-                                                                filter(lambda p: p.requires_grad, self.net_f_D.parameters())),
+            self.optimizer_D = torch.optim.Adam(itertools.chain(filter(lambda p: p.requires_grad, self.net_img_D.parameters())),
                                                 lr=opt.lr_trans, betas=(0.5, 0.9))
+
             self.optimizers = []
             self.schedulers = []
             self.optimizers.append(self.optimizer_T2Net)
@@ -64,22 +73,22 @@ class T2NetModel(BaseModel):
         self.input = input
         self.img_source = input['img_source']
         self.img_target = input['img_target']
-        if self.isTrain:
-            self.lab_source = input['lab_source']
-            self.lab_target = input['lab_target']
+        # if self.isTrain:
+        #     self.lab_source = input['lab_source']
+        #     self.lab_target = input['lab_target']
 
         if len(self.gpu_ids) > 0:
-            self.img_source = self.img_source.cuda(self.gpu_ids[0], async=True)
-            self.img_target = self.img_target.cuda(self.gpu_ids[0], async=True)
-            if self.isTrain:
-                self.lab_source = self.lab_source.cuda(self.gpu_ids[0], async=True)
-                self.lab_target = self.lab_target.cuda(self.gpu_ids[0], async=True)
+            self.img_source = self.img_source.cuda(self.gpu_ids[0], non_blocking=True)
+            self.img_target = self.img_target.cuda(self.gpu_ids[0], non_blocking=True)
+            # if self.isTrain:
+            #     self.lab_source = self.lab_source.cuda(self.gpu_ids[0], async=True)
+            #     self.lab_target = self.lab_target.cuda(self.gpu_ids[0], async=True)
 
     def forward(self):
         self.img_s = Variable(self.img_source)
         self.img_t = Variable(self.img_target)
-        self.lab_s = Variable(self.lab_source)
-        self.lab_t = Variable(self.lab_target)
+        # self.lab_s = Variable(self.lab_source)
+        # self.lab_t = Variable(self.lab_target)
 
     def backward_D_basic(self, netD, real, fake):
 
@@ -98,7 +107,8 @@ class T2NetModel(BaseModel):
         return D_loss
 
     def backward_D_image(self):
-        network._freeze(self.net_s2t, self.net_img2task, self.net_f_D)
+        # network._freeze(self.net_s2t, self.net_img2task, self.net_f_D)
+        network._freeze(self.net_s2t)
         network._unfreeze(self.net_img_D)
         size = len(self.img_s2t)
         fake = []
@@ -107,10 +117,10 @@ class T2NetModel(BaseModel):
         real = task.scale_pyramid(self.img_t, size)
         self.loss_img_D = self.backward_D_basic(self.net_img_D, real, fake)
 
-    def backward_D_feature(self):
-        network._freeze(self.net_s2t, self.net_img2task, self.net_img_D)
-        network._unfreeze(self.net_f_D)
-        self.loss_f_D = self.backward_D_basic(self.net_f_D, [self.lab_f_t], [self.lab_f_s])
+    # def backward_D_feature(self):
+    #     network._freeze(self.net_s2t, self.net_img2task, self.net_img_D)
+    #     network._unfreeze(self.net_f_D)
+    #     self.loss_f_D = self.backward_D_basic(self.net_f_D, [self.lab_f_t], [self.lab_f_s])
 
     def foreward_G_basic(self, net_G, img_s, img_t):
 
@@ -135,10 +145,18 @@ class T2NetModel(BaseModel):
     def backward_synthesis2real(self):
 
         # image to image transform
-        network._freeze(self.net_img2task, self.net_img_D, self.net_f_D)
+        # network._freeze(self.net_img2task, self.net_img_D, self.net_f_D)
+        network._freeze(self.net_img_D)
         network._unfreeze(self.net_s2t)
         self.img_s2t, self.img_t2t, self.img_f_s, self.img_f_t, size = \
             self.foreward_G_basic(self.net_s2t, self.img_s, self.img_t)
+
+        # anyi -  save img_s2t
+        for i in range(len(self.img_s2t)):
+            img_source2target = util.tensor2im(self.img_s2t[-1].data[i])
+            image_name = 'trains2t_%s.png' % i
+            save_path = os.path.join('./checkpoints/giraffe_wsupervised/web/images/', image_name)
+            util.save_image(img_source2target, save_path)
 
         # image GAN loss and reconstruction loss
         img_real = task.scale_pyramid(self.img_t, size - 1)
@@ -157,54 +175,54 @@ class T2NetModel(BaseModel):
 
         total_loss.backward(retain_graph=True)
 
-    def backward_translated2depth(self):
+    # def backward_translated2depth(self):
 
-        # task network
-        network._freeze(self.net_img_D, self.net_f_D)
-        network._unfreeze(self.net_s2t, self.net_img2task)
-        fake = self.net_img2task.forward(self.img_s2t[-1])
+    #     # task network
+    #     network._freeze(self.net_img_D, self.net_f_D)
+    #     network._unfreeze(self.net_s2t, self.net_img2task)
+    #     fake = self.net_img2task.forward(self.img_s2t[-1])
 
-        size=len(fake)
-        self.lab_f_s = fake[0]
-        self.lab_s_g = fake[1:]
+    #     size=len(fake)
+    #     self.lab_f_s = fake[0]
+    #     self.lab_s_g = fake[1:]
 
-        #feature GAN loss
-        D_fake = self.net_f_D(self.lab_f_s)
-        G_loss = 0
-        for D_fake_i in D_fake:
-            G_loss += torch.mean((D_fake_i - 1.0) ** 2)
-        self.loss_f_G = G_loss * self.opt.lambda_gan_feature
+    #     #feature GAN loss
+    #     D_fake = self.net_f_D(self.lab_f_s)
+    #     G_loss = 0
+    #     for D_fake_i in D_fake:
+    #         G_loss += torch.mean((D_fake_i - 1.0) ** 2)
+    #     self.loss_f_G = G_loss * self.opt.lambda_gan_feature
 
-        # task loss
-        lab_real = task.scale_pyramid(self.lab_s, size-1)
-        task_loss = 0
-        for (lab_fake_i, lab_real_i) in zip(self.lab_s_g, lab_real):
-            task_loss += self.l1loss(lab_fake_i, lab_real_i)
+    #     # task loss
+    #     lab_real = task.scale_pyramid(self.lab_s, size-1)
+    #     task_loss = 0
+    #     for (lab_fake_i, lab_real_i) in zip(self.lab_s_g, lab_real):
+    #         task_loss += self.l1loss(lab_fake_i, lab_real_i)
 
-        self.loss_lab_s = task_loss * self.opt.lambda_rec_lab
+    #     self.loss_lab_s = task_loss * self.opt.lambda_rec_lab
 
-        total_loss = self.loss_f_G + self.loss_lab_s
+    #     total_loss = self.loss_f_G + self.loss_lab_s
 
-        total_loss.backward()
+    #     total_loss.backward()
 
-    def backward_real2depth(self):
+    # def backward_real2depth(self):
 
         # image2depth
-        network._freeze(self.net_s2t, self.net_img_D, self.net_f_D)
-        network._unfreeze(self.net_img2task)
-        fake = self.net_img2task.forward(self.img_t)
-        size = len(fake)
+        # network._freeze(self.net_s2t, self.net_img_D, self.net_f_D)
+        # network._unfreeze(self.net_img2task)
+        # fake = self.net_img2task.forward(self.img_t)
+        # size = len(fake)
 
-        # Gan depth
-        self.lab_f_t = fake[0]
-        self.lab_t_g = fake[1:]
+        # # Gan depth
+        # self.lab_f_t = fake[0]
+        # self.lab_t_g = fake[1:]
 
-        img_real = task.scale_pyramid(self.img_t, size - 1)
-        self.loss_lab_smooth = task.get_smooth_weight(self.lab_t_g, img_real, size-1) * self.opt.lambda_smooth
+        # img_real = task.scale_pyramid(self.img_t, size - 1)
+        # self.loss_lab_smooth = task.get_smooth_weight(self.lab_t_g, img_real, size-1) * self.opt.lambda_smooth
 
-        total_loss = self.loss_lab_smooth
+        # total_loss = self.loss_lab_smooth
 
-        total_loss.backward()
+        # total_loss.backward()
 
     def optimize_parameters(self, epoch_iter):
 
@@ -212,17 +230,17 @@ class T2NetModel(BaseModel):
         # T2Net
         self.optimizer_T2Net.zero_grad()
         self.backward_synthesis2real()
-        self.backward_translated2depth()
-        self.backward_real2depth()
+        # self.backward_translated2depth()
+        # self.backward_real2depth()
         self.optimizer_T2Net.step()
         # Discriminator
         self.optimizer_D.zero_grad()
-        self.backward_D_feature()
+        # self.backward_D_feature()
         self.backward_D_image()
         if epoch_iter % 5 == 0:
             self.optimizer_D.step()
-            for p in self.net_f_D.parameters():
-                p.data.clamp_(-0.01,0.01)
+            # for p in self.net_f_D.parameters():
+            #     p.data.clamp_(-0.01,0.01)
 
     def validation_target(self):
 
